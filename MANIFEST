@@ -1,8 +1,0 @@
-Changes
-Makefile.PL
-MANIFEST
-PerfMon.pm
-PerfMon.xs
-README
-META.yml                                 Module meta-data (added by MakeMaker)
-t/use.t
