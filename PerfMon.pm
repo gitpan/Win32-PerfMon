@@ -29,7 +29,7 @@ require DynaLoader;
 
 our @ISA = qw(Exporter DynaLoader);
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 bootstrap Win32::PerfMon $VERSION;
 
@@ -102,21 +102,31 @@ sub AddCounter
 		return(0);
 	}
 	
-	my ($self, $ObjectName, $CounterName, $InstanceName) = @_;
+	my ($self, $ObjectName, $CounterName, $Instance) = @_;
 	
 	if($CounterName =~ /\/sec/g)
 	{
 		$self->{'CALC_RATE'} = 1;
 	}
+		
+	my ($InstanceName, $InstanceNumber) = undef; 
+	($InstanceName, $InstanceNumber) = split('\#', $Instance);
+	
+	unless(defined($InstanceNumber))
+	{
+		$InstanceNumber = -1;
+	}
 				
 	# go and create the counter ....
-        my $NewCounter = add_counter($self->{'MACHINENAME'}, $ObjectName, $CounterName, $InstanceName, $self->{'HQUERY'}, $self->{'ERRORMSG'});
+        my $NewCounter = add_counter($self->{'MACHINENAME'}, $ObjectName, $CounterName, $InstanceName, $InstanceNumber, $self->{'HQUERY'}, $self->{'ERRORMSG'});
         
         if($NewCounter == -1)
         {			
 		return(0);
 	}
 	# if it all worked, add it to the internal structure
+	
+	print " Going to store the following:\n\tObject = $ObjectName\n\tCounter = $CounterName\n\tInstance = $InstanceName\n\n";
 			
         if($InstanceName eq "-1")
         {
@@ -124,7 +134,7 @@ sub AddCounter
         }
         else
         {
-                $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'} = $NewCounter;
+                $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$Instance}->{'Object'} = $NewCounter;
         }
 }
 

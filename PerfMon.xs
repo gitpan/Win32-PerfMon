@@ -74,11 +74,12 @@ CleanUp(objQuery)
 
 
 void
-add_counter(BoxName, ObjectName, CounterName, InstanceName, pQwy, pError)
+add_counter(BoxName, ObjectName, CounterName, InstanceName, InstanceNumber, pQwy, pError)
 	SV* BoxName
 	SV* ObjectName
 	SV* CounterName
 	SV* InstanceName
+	SV* InstanceNumber
 	SV* pQwy
 	SV* pError;
 
@@ -95,6 +96,7 @@ add_counter(BoxName, ObjectName, CounterName, InstanceName, pQwy, pError)
 		STRLEN len2;
 		STRLEN len3;
 		STRLEN BoxNameLen;
+		DWORD TheInstance;
 
 	PPCODE:
 
@@ -106,6 +108,13 @@ add_counter(BoxName, ObjectName, CounterName, InstanceName, pQwy, pError)
 		len1 = sv_len(ObjectName);
 		len2 = sv_len(CounterName);
 		BoxNameLen = sv_len(BoxName);
+		
+		TheInstance = SvUV(InstanceNumber);
+		
+		if(TheInstance == -1)
+		{
+			TheInstance = 0;
+		}
 
 		if(SvNIOK(InstanceName))
 		{
@@ -121,7 +130,7 @@ add_counter(BoxName, ObjectName, CounterName, InstanceName, pQwy, pError)
 		GStruct.szCounterName = SvPV(CounterName, len2);
 		GStruct.szMachineName = SvPV(BoxName, BoxNameLen);
 		GStruct.szParentInstance = NULL;
-		GStruct.dwInstanceIndex = 0;
+		GStruct.dwInstanceIndex = TheInstance;
 
 		stat = PdhMakeCounterPath(&GStruct, (char*)str, &dwSize, NULL);
 
