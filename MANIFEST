@@ -6,3 +6,4 @@ PerfMon.xs
 README
 test.pl
 META.yml                                 Module meta-data (added by MakeMaker)
+t/use.t
