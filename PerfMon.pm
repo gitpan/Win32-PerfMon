@@ -29,7 +29,7 @@ require DynaLoader;
 
 our @ISA = qw(Exporter DynaLoader);
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 bootstrap Win32::PerfMon $VERSION;
 
@@ -49,6 +49,7 @@ sub new
 	
 	my($class, $box) = @_;
 	
+	# Our internal variables.  Should use methods to access
 	$self->{'HQUERY'} = undef;
 	$self->{'COUNTERS'} = undef;
 	$self->{'ERRORMSG'} = undef;
@@ -57,18 +58,35 @@ sub new
 	
 	bless($self, $class);
 	
+	# Set the box to connect to
 	$self->{'MACHINENAME'} = $box;
 	
+	# Connect to it
         my $res = connect_to_box($self->{'MACHINENAME'}, $self->{'ERRORMSG'});
 	
+	# See if it worked
 	if($res == 0)
 	{
-		$self->{'HQUERY'} = open_query();
-			
-		return $self;
+		# It did, so try and connect to PDH.dll
+		my $RetVal = open_query();
+		
+		# Now did that work ??
+		if($RetVal == -1)
+		{
+			# Nope
+			return undef;
+		}
+		else
+		{
+			# Yes, so return the object
+			$self->{'HQUERY'} = $RetVal;
+						
+			return $self;
+		}
 	}
 	else
 	{
+		# No it didn't so set the error message
 		print "Failed to create object [$self->{'ERRORMSG'}]\n";
 		return undef;
 	}
@@ -96,6 +114,7 @@ sub DESTROY
 ##########################################
 sub AddCounter
 {	
+	# Have we got enough params
 	unless(scalar(@_) == 4)
 	{
 		croak("USAGE: AddCounter(ObjectName, CounterName, InstanceName)");
@@ -104,14 +123,18 @@ sub AddCounter
 	
 	my ($self, $ObjectName, $CounterName, $Instance) = @_;
 	
+	# Do we need to handle a rate counter ??
 	if($CounterName =~ /\/sec/g)
 	{
 		$self->{'CALC_RATE'} = 1;
 	}
-		
+	
+	# Default processing, just incase we are dealing with a duplicate counter name ??
+	# Could happen if looking at process names such as svchost
 	my ($InstanceName, $InstanceNumber) = undef; 
 	($InstanceName, $InstanceNumber) = split('\#', $Instance);
 	
+	# Do we have a instance go look at ?
 	unless(defined($InstanceNumber))
 	{
 		$InstanceNumber = -1;
@@ -120,14 +143,14 @@ sub AddCounter
 	# go and create the counter ....
         my $NewCounter = add_counter($self->{'MACHINENAME'}, $ObjectName, $CounterName, $InstanceName, $InstanceNumber, $self->{'HQUERY'}, $self->{'ERRORMSG'});
         
+        # Return if that didn't work.  Error message will already have been set
         if($NewCounter == -1)
         {			
 		return(0);
 	}
-	# if it all worked, add it to the internal structure
 	
-	print " Going to store the following:\n\tObject = $ObjectName\n\tCounter = $CounterName\n\tInstance = $InstanceName\n\n";
-			
+	
+	# if it all worked, add it to the internal structure			
         if($InstanceName eq "-1")
         {
                 $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'} = $NewCounter;
@@ -164,12 +187,6 @@ sub CollectData
 	{
 	    return(1);
 	}
-	
-	
-	
-	
-	
-
 }
 
 ##########################################
@@ -190,11 +207,31 @@ sub GetCounterValue
 	# Go and get the value for the reqested counter
 	if($InstanceName eq "-1")
 	{
-		$RetVal = collect_counter_value($self->{'HQUERY'}, $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'}, $self->{'ERRORMSG'});	
+		if(exists($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'}))
+		{
+			$RetVal = collect_counter_value($self->{'HQUERY'}, $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'}, $self->{'ERRORMSG'});	
+		}
+		else
+		{
+			$self->{'ERRORMSG'} = "Counter Does Not Exist";
+			
+			$RetVal = -1;
+		}
 	}
 	else
 	{
 		$RetVal = collect_counter_value($self->{'HQUERY'}, $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'}, $self->{'ERRORMSG'});
+	
+		if(exists($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'}))
+		{
+			$RetVal = collect_counter_value($self->{'HQUERY'}, $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'}, $self->{'ERRORMSG'});	
+		}
+		else
+		{
+			$self->{'ERRORMSG'} = "Counter Does Not Exist";
+			
+			$RetVal = -1;
+		}
 	}
 	
 	return($RetVal);
@@ -220,13 +257,69 @@ sub GetErrorText
 ###########################################
 # Function to list the objects
 ###########################################
-sub GetObjects
+sub ListObjects
 {
 	my $self = shift;
 	
-	my $Data = list_objects($self->{'MACHINENAME'});
+	my $Data = list_objects($self->{'MACHINENAME'}, $self->{'ERRORMSG'});
 	
-	return $Data;
+	my @Objects = split(/\|/, $Data);
+	
+	return(\@Objects);
+}
+
+###########################################
+# Function to list an objects counters
+###########################################
+sub ListCounters
+{
+	unless(scalar(@_) == 2)
+	{
+		croak("Usage: ListCounters(ObjectName)");
+		return(0);
+	}
+	
+	my ($self, $Object) = @_;
+	
+	my $Data = list_counters($self->{'MACHINENAME'}, $Object, $self->{'ERRORMSG'});
+	
+	my @Counters = split(/\|/, $Data);
+	
+	if($Counters[0] eq -1)
+	{
+		return(-1);
+	}
+	else
+	{	
+		return(\@Counters);
+	}
+}
+
+###########################################
+# Function to list an objects Instances
+###########################################
+sub ListInstances
+{
+	unless(scalar(@_) == 2)
+	{
+		croak("Usage: ListInstances(ObjectName)");
+		return(0);
+	}
+	
+	my ($self, $Object) = @_;
+	
+	my $Data = list_instances($self->{'MACHINENAME'}, $Object, $self->{'ERRORMSG'});
+	
+	my @Instances = split(/\|/, $Data);
+	
+	if($Instances[0] eq -1)
+	{
+		return(-1);
+	}
+	else
+	{	
+		return(\@Instances);
+	}
 }
 
 ###########################################
@@ -240,17 +333,90 @@ sub ExplainCounter()
 	return(0);
     }
 		
-    my ($self, $ObjectName, $CounterName, $InstanceName) = @_;
-    
-    my $RetVal = explain_counter($self->{'HQUERY'}, $ObjectName, $CounterName, $InstanceName, $self->{'ERRORMSG'});
-		    
-    return($RetVal);
+	my ($self, $ObjectName, $CounterName, $InstanceName) = @_;
+	
+	my $RetVal = undef;
+		
+	# Go and get the value for the reqested counter
+	if($InstanceName eq "-1")
+	{
+		if(exists($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'}))
+		{
+			$RetVal = explain_counter($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'}, $self->{'ERRORMSG'});	
+		}
+		else
+		{
+			$self->{'ERRORMSG'} = "Counter Does Not Exist";
+			
+			$RetVal = -1;
+		}
+	}
+	else
+	{
+		if(exists($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'}))
+		{
+			$RetVal = explain_counter($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'}, $self->{'ERRORMSG'});	
+		}
+		else
+		{
+			$self->{'ERRORMSG'} = "Counter Does Not Exist";
+			
+			$RetVal = -1;
+		}
+	}
+	
+	return($RetVal);
+}
+
+
+#############################################
+# Function to remove a counter from the query
+#############################################
+sub RemoveCounter
+{
+	# Have we got enough params
+	unless(scalar(@_) == 4)
+	{
+		croak("USAGE: AddCounter(ObjectName, CounterName, InstanceName)");
+		return(0);
+	}
+	
+	my ($self, $ObjectName, $CounterName, $InstanceName) = @_;
+	
+	my $RetVal = undef;
+			
+	# Go and get the value for the reqested counter
+	if($InstanceName eq "-1")
+	{
+		$RetVal = remove_counter($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'}, $self->{'ERRORMSG'});	
+		
+		if($RetVal == -1)
+		{
+			return(0);
+		}
+		else
+		{
+			delete $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{'Object'};
+		}
+	}
+	else
+	{
+		$RetVal = remove_counter($self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'}, $self->{'ERRORMSG'});
+		
+		if($RetVal == -1)
+		{
+			return(0);
+		}
+		else
+		{
+			delete $self->{'COUNTERS'}->{$ObjectName}->{$CounterName}->{$InstanceName}->{'Object'};
+		}
+	}	
 }
 
 
 1;
 __END__
-# Below is stub documentation for your module. You better edit it!
 
 =head1 NAME
 
@@ -316,12 +482,11 @@ to add miltiple counters to a query object, and then in a loop, gather the data 
 counters.  This mechanism is very similar to the native windows method.
 
 
-=head1 FUNCTIONS
+=head1 METHODS
 
 =head2 NOTE
 
-All funcitons return a non zero value if successful, and zero is they fail, excpet GetCounterValue()
-which will return -1 if it fails.
+All functions return 0 (zero) unless stated otherwise.
 
 =over 4
 
@@ -334,7 +499,7 @@ wish to get performance counter on.  Remember to include the leading slashes.
 
 	my $PerfObj = Win32::PerfMon->new("\\\\SERVERNAME");
 
-=item $PerfObj->AddCounter($ObjectName, $CounterName, $InstanceName)
+=item AddCounter($ObjectName, $CounterName, $InstanceName)
 
 This function adds the requested counter to the query obejct.
 
@@ -363,7 +528,7 @@ to calling collect data
         
         etc ....
 
-=item $PerfObj->CollectData()
+=item CollectData()
 
 This function when called, will populate the internal structures with the performance data values.
 This function should be called after the counters have been added, and before retrieving the counter
@@ -371,17 +536,17 @@ values.
 
 	$PerfObj->CollectData();
 
-=item $PerfObj->GetCounterValue($ObjectName, $CounterName, $InstanceName);
+=item GetCounterValue($ObjectName, $CounterName, $InstanceName);
 
 This function returns a scaler containing the numeric value for the requested counter.  Befoer calling this
-function, you should call CollectData, to populate the internal structures with the relevent data.
+function, you should call CollectData() to populate the internal structures with the relevent data.
 
 	$PerfObj->GetCounterValue("System", "System Up Time", -1);
 	
 Note that if the counter in question does not have a Instance, you should pass in -1;
 You should call this function for every counter you have added, in between calls to CollectData();
 
-GetCounterValue() can be called in a loop and in conjunction with CollectData(), if you wish to gather
+GetCounterValue() can be called in a loop and in conjunction with CollectData() if you wish to gather
 a series of data, over a period of time.
 
 	# Get the initial values
@@ -399,12 +564,67 @@ a series of data, over a period of time.
 		$PerfObj->CollectData();
 	}
 
-=item $PerfObj->GetErrorText()
+=item GetErrorText()
 
 Returns the error message from the last failed function call.
 
 	my $err = $PerfObj->GetErrorText();
 
+=item ListObjects()
+
+Lists all the available performance object on the connected machiene.  NOTE: This function returns
+a reference to an array containing the data.  The returned list contains the top level Objetcs.
+
+	my $Data = $PerfObj->ListObjects();
+	
+	foreach $Object (@$Data)
+	{
+		print "$Object\n";
+	}
+
+=item ListCounter($ObjectName)
+
+Lists all the available performance counters for the specified object on the connected machiene.  
+NOTE: This function returns a reference to an array containing the data.  
+
+	my $Data = $PerfObj->ListCounters("System");
+	
+	foreach $Counter (@$Data)
+	{
+		print "$Counter\n";
+	}
+
+=item ListInstances($ObjectName)
+
+Lists all the available performance counter instances for the specified object on the connected machiene.  
+NOTE: This function returns a reference to an array containing the data.  
+
+	my $Data = $PerfObj->ListInstances("System");
+	
+	foreach $Instance (@$Data)
+	{
+		print "$Instance\n";
+	}
+
+=item RemoveCounter($ObjectName, $CounterName, $InstanceName)
+
+Removes the specifed counter from the query object.  All other defined counte will
+remain.  As with other functions, the InstanceName should be replaced with -1 if the Instance
+is not required.
+
+	$PerfObj->RemoveCounter("System", "System Up Time", -1);
+	
+Funtion will return 0 if it didn't work.  Most likley reason for a failure is that the specified
+counter had not been defined in the first place.
+
+=item ExplainCounter($ObjectName, $CounterName, $InstanceName)
+
+Returns a string containing the counter description, as defined on the current Windows system.  
+
+	my $CounterText = $PerfObj->ExplainCounter("System", "System Up Time", -1);
+	
+NOTE: You MUST have added the counter to your object beofre calling this function.  If you don't 
+actually want to use the counter, you can simple call RemoveCounter() once the function returns.
 
 =back
 
