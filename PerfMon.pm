@@ -35,7 +35,7 @@ our @ISA = qw(Exporter DynaLoader);
 
 #our @EXPORT = qw();
 
-our $VERSION = '1.00';
+our $VERSION = '0.01';
 
 bootstrap Win32::PerfMon $VERSION;
 
@@ -351,7 +351,7 @@ Returns the error message from the last failed function call.
 
 =head1 AUTHOR
 
-Glen Small perl.dev@cyberex.org.uk<gt>
+Glen Small <perl.dev@cyberex.org.uk><gt>
 
 
 

@@ -1,24 +1,50 @@
 use Win32::PerfMon;
+use strict;
 
+my $ServerName = "<Server Name Goes Here>";
+my $ret = undef;
+my $err = undef;
 
-my $xxx = undef;
+my $xxx = Win32::PerfMon->new("\\\\$ServerName");
 
-$xxx = new Win32::PerfMon;
-
-
-my $ret = $xxx->add_counter("System", "System Up Time", 0 || die "Error Adding Object [$!]\n";
-
-if($ret == 0)
+if($xxx != undef)
 {
-	print $xxx->{'ERRORMSG'};
+	$ret = $xxx->AddCounter("System", "System Up Time", -1);
+	
+	if($ret != 0)
+	{
+		$ret = $xxx->CollectData();
+		
+		if($ret  != 0)
+		{
+			my $secs = $xxx->GetCounterValue("System", "System Up Time", -1);
+			
+			if($secs > -1)
+			{
+				print "Seconds of Up Time = [$secs]\n";
+			}
+			else
+			{
+				$err = $xxx->GetErrorText();
+				
+				print "Failed to get the counter data ", $err, "\n";
+			}
+		}
+		else
+		{
+			$err = $xxx->GetErrorText();
+							
+			print "Failed to collect the perf data ", $err, "\n";
+		}
+	}
+	else
+	{
+		$err = $xxx->GetErrorText();
+						
+		print "Failed to add the counter ", $err, "\n";
+	}
 }
 else
-{
-	print "All done\n";
+{				
+	print "Failed to greate the perf object\n";
 }
-
-
-
-
-
-
