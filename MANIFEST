@@ -5,5 +5,4 @@ PerfMon.pm
 PerfMon.xs
 README
 test.pl
-PerfMon.html
 META.yml                                 Module meta-data (added by MakeMaker)

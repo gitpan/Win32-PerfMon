@@ -35,7 +35,7 @@ our @ISA = qw(Exporter DynaLoader);
 
 #our @EXPORT = qw();
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 bootstrap Win32::PerfMon $VERSION;
 
@@ -205,6 +205,24 @@ sub GetObjects
 	return $Data;
 }
 
+###########################################
+# Function to explain a counter
+###########################################
+sub ExplainCounter()
+{
+    unless(scalar(@_) == 4)
+    {
+	croak("USAGE: ExplainCounter(ObjectName, CounterName, InstanceName)");
+	return(0);
+    }
+		
+    my ($self, $ObjectName, $CounterName, $InstanceName) = @_;
+    
+    my $RetVal = explain_counter($self->{'HQUERY'}, $ObjectName, $CounterName, $InstanceName, $self->{'ERRORMSG'});
+		    
+    return($RetVal);
+}
+
 
 1;
 __END__
@@ -283,7 +301,7 @@ which will return -1 if it fails.
 
 =over 4
 
-=item New($ServerName)
+=item new($ServerName)
 
 This is the constructor for the PerfMon perl object.  Calling this function will create
 a perl object, as well as calling the underlying WIN32 API code to attach the object
@@ -296,7 +314,7 @@ wish to get performance counter on.  Remember to include the leading slashes.
 
 This function adds the requested counter to the query obejct.
 
-	$PerfObj->AddCounter("Processor", "\% Processor Time", "_Total");
+	$PerfObj->AddCounter("Processor", "% Processor Time", "_Total");
 	
 Not all counters will have a Instance.  This this case, you would simply substitue the 
 Instance with a -1.
@@ -320,23 +338,24 @@ function, you should call CollectData, to populate the internal structures with 
 
 	$PerfObj->GetCounterValue("System", "System Up Time", -1);
 	
-Note that if the counter in question does not have a Instance, you should pass in a zero value (0);
+Note that if the counter in question does not have a Instance, you should pass in -1;
 You should call this function for every counter you have added, in between calls to CollectData();
 
 GetCounterValue() can be called in a loop and in conjunction with CollectData(), if you wish to gather
-a series of data.
+a series of data, over a period of time.
 
 	# Get the initial values
 	$PerfObj->CollectData();
 	
-	for(1..10)
+	for(1..60)
 	{
 		# Store the value in question
-		$value = $PerfObj->GetCounterValue("System", "System Up Time", -1);
+		my $value = $PerfObj->GetCounterValue("Web", "Current Connections", "_Total");
 		
-		# Do something with $value
+		# Do something with $value - e.g. store it in a DB
 		
-		# Now update the counter value
+		# Now update the counter value, so that the next call to GetCounterValue has
+		# the updated values
 		$PerfObj->CollectData();
 	}
 
@@ -351,7 +370,7 @@ Returns the error message from the last failed function call.
 
 =head1 AUTHOR
 
-Glen Small <perl.dev@cyberex.org.uk><gt>
+Glen Small <perl.dev@cyberex.org.uk>
 
 
 

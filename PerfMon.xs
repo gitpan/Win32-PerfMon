@@ -485,9 +485,6 @@ void explain_counter(pObject, pCounter, pInstance, pQwy, pError)
 		}
 		else
 		{
-
-			stat = PdhAddCounter(hQwy, (LPTSTR)str, dwGlen, &cnt);
-
 			switch(stat)
 			{
 				case ERROR_SUCCESS:
