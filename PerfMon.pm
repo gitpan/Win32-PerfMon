@@ -29,13 +29,7 @@ require DynaLoader;
 
 our @ISA = qw(Exporter DynaLoader);
 
-#our %EXPORT_TAGS = ( 'all' => [ qw() ] );
-
-#our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-
-#our @EXPORT = qw();
-
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 bootstrap Win32::PerfMon $VERSION;
 
@@ -339,9 +333,25 @@ This function adds the requested counter to the query obejct.
 Not all counters will have a Instance.  This this case, you would simply substitue the 
 Instance with a -1.
 
-This function can be called as many times as is needed, to gather the requested counters.
+If you require performance data onmultiple counter, simply call AddCounter() multiple time, prior
+to calling collect data
 
+        # Create the object
+        my $PerfObj = Win32::PerfMon->new("\\\\SERVERNAME");
+
+        # Add All the counters
 	$PerfObj->AddCounter("System", "System Up Time", -1);
+	$PerfObj->AddCounter("System","Context Switches/sec", "-1");
+        $PerfObj->AddCounter("System","Processes", "-1");
+        $PerfObj->AddCounter("Processor","Interrupts/sec", "_Total");
+        
+        # Populate the counters from perfmon
+        $PerfObj->CollectData()
+        
+        # Now retrieve the data
+        my $value = $PerfObj->GetCounterValue("System", "System Up Time", -1);
+        
+        etc ....
 
 =item $PerfObj->CollectData()
 

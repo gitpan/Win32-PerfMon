@@ -9,3 +9,6 @@ Revision history for Perl extension Win32::PerfMon.
 
 0.03  Thu Oct 07 14:50:00 2004
 	- Fixed a bug with regard to getting counters that are xxx/sec  e.g. context switch/sec
+
+0.04  Thu Oct 07 21:00:00 2004
+	- Changes to the documentation and the test script.  Some mods to the internals.
