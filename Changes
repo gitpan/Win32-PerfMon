@@ -12,3 +12,6 @@ Revision history for Perl extension Win32::PerfMon.
 
 0.04  Thu Oct 07 21:00:00 2004
 	- Changes to the documentation and the test script.  Some mods to the internals.
+	
+0.05  Mon Oct 11 14:00:00 2004
+	- Fix bug when getting counters on a remote machiene

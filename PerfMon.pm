@@ -29,7 +29,7 @@ require DynaLoader;
 
 our @ISA = qw(Exporter DynaLoader);
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 bootstrap Win32::PerfMon $VERSION;
 
@@ -110,7 +110,7 @@ sub AddCounter
 	}
 				
 	# go and create the counter ....
-        my $NewCounter = add_counter($ObjectName, $CounterName, $InstanceName, $self->{'HQUERY'}, $self->{'ERRORMSG'});
+        my $NewCounter = add_counter($self->{'MACHINENAME'}, $ObjectName, $CounterName, $InstanceName, $self->{'HQUERY'}, $self->{'ERRORMSG'});
         
         if($NewCounter == -1)
         {			
