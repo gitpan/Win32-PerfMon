@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Win32::PerfMon - Perl extension for Windows Perf Monitor</title>
+<link rev="made" href="mailto:" />
+</head>
+
+<body style="background-color: white">
+
+<p><a name="__index__"></a></p>
+<!-- INDEX BEGIN -->
+
+<ul>
+
+	<li><a href="#name">NAME</a></li>
+	<li><a href="#synopsis">SYNOPSIS</a></li>
+	<li><a href="#description">DESCRIPTION</a></li>
+	<li><a href="#functions">FUNCTIONS</a></li>
+	<ul>
+
+		<li><a href="#note">NOTE</a></li>
+	</ul>
+
+	<li><a href="#author">AUTHOR</a></li>
+	<li><a href="#see_also">SEE ALSO</a></li>
+</ul>
+<!-- INDEX END -->
+
+<hr />
+<p>
+</p>
+<h1><a name="name">NAME</a></h1>
+<p>Win32::PerfMon - Perl extension for Windows Perf Monitor (NT4 +)</p>
+<p>
+</p>
+<hr />
+<h1><a name="synopsis">SYNOPSIS</a></h1>
+<pre>
+  use Win32::PerfMon;
+  use strict;
+  
+  my $ret = undef;
+  my $err = undef;
+  
+  my $xxx = Win32::PerfMon-&gt;new(&quot;\\\\MyServer&quot;);
+  
+  if($xxx != undef)
+  {
+        $ret = $xxx-&gt;AddCounter(&quot;System&quot;, &quot;System Up Time&quot;, -1);
+        
+        if($ret != 0)
+        {
+                $ret = $xxx-&gt;CollectData();
+                
+                if($ret  != 0)
+                {
+                        my $secs = $xxx-&gt;GetCounterValue(&quot;System&quot;, &quot;System Up Time&quot;, -1);
+                        
+                        if($secs &gt; -1)
+                        {
+                                print &quot;Seconds of Up Time = [$secs]\n&quot;;
+                        }
+                        else
+                        {
+                                $err = $xxx-&gt;GetErrorText();
+                                
+                                print &quot;Failed to get the counter data &quot;, $err, &quot;\n&quot;;
+                        }
+                }
+                else
+                {
+                        $err = $xxx-&gt;GetErrorText();
+                                                        
+                        print &quot;Failed to collect the perf data &quot;, $err, &quot;\n&quot;;
+                }
+        }
+        else
+        {
+                $err = $xxx-&gt;GetErrorText();
+                                                
+                print &quot;Failed to add the counter &quot;, $err, &quot;\n&quot;;
+        }
+  }
+  else
+  {                             
+        print &quot;Failed to greate the perf object\n&quot;;
+}</pre>
+<p>
+</p>
+<hr />
+<h1><a name="description">DESCRIPTION</a></h1>
+<p>This modules provides and interface into the Windows Performance Monitor, which
+can be found on any Windows Server from NT 4 onwards.  The module allows the programmer
+to add miltiple counters to a query object, and then in a loop, gather the data for those
+counters.  This mechanism is very similar to the native windows method.</p>
+<p>
+</p>
+<hr />
+<h1><a name="functions">FUNCTIONS</a></h1>
+<p>
+</p>
+<h2><a name="note">NOTE</a></h2>
+<p>All funcitons return a non zero value if successful, and zero is they fail, excpet <a href="#item_getcountervalue"><code>GetCounterValue()</code></a>
+which will return -1 if it fails.</p>
+<dl>
+<dt><strong><a name="item_new"><code>New($ServerName)</code></a></strong><br />
+</dt>
+<dd>
+This is the constructor for the PerfMon perl object.  Calling this function will create
+a perl object, as well as calling the underlying WIN32 API code to attach the object
+to the windows Performance Monitor.  The function takes as a parameter, the name of the server you
+wish to get performance counter on.  Remember to include the leading slashes.
+
+
+</dd>
+<dd>
+<pre>
+        my $PerfObj = Win32::PerfMon-&gt;new(&quot;\\\\SERVERNAME&quot;);
+
+</pre>
+</dd>
+<p></p>
+<dt><strong><a name="item_addcounter">$PerfObj-&gt;AddCounter($ObjectName, $CounterName, $InstanceName)</a></strong><br />
+</dt>
+<dd>
+This function adds the requested counter to the query obejct.
+
+
+</dd>
+<dd>
+<pre>
+        $PerfObj-&gt;AddCounter(&quot;Processor&quot;, &quot;\% Processor Time&quot;, &quot;_Total&quot;);
+        
+Not all counters will have a Instance.  This this case, you would simply substitue the 
+Instance with a -1.
+
+</pre>
+</dd>
+<dd>
+<p>This function can be called as many times as is needed, to gather the requested counters.
+
+</p>
+</dd>
+<dd>
+<pre>
+        $PerfObj-&gt;AddCounter(&quot;System&quot;, &quot;System Up Time&quot;, -1);
+
+</pre>
+</dd>
+<p></p>
+<dt><strong><a name="item_collectdata">$PerfObj-&gt;<code>CollectData()</code></a></strong><br />
+</dt>
+<dd>
+This function when called, will populate the internal structures with the performance data values.
+This function should be called after the counters have been added, and before retrieving the counter
+values. 
+
+
+</dd>
+<dd>
+<pre>
+        $PerfObj-&gt;CollectData();
+
+</pre>
+</dd>
+<p></p>
+<dt><strong><a name="item_getcountervalue">$PerfObj-&gt;GetCounterValue($ObjectName, $CounterName, $InstanceName);</a></strong><br />
+</dt>
+<dd>
+This function returns a scaler containing the numeric value for the requested counter.  Befoer calling this
+function, you should call CollectData, to populate the internal structures with the relevent data.
+
+
+</dd>
+<dd>
+<pre>
+        $PerfObj-&gt;GetCounterValue(&quot;System&quot;, &quot;System Up Time&quot;, -1);
+        
+Note that if the counter in question does not have a Instance, you should pass in a zero value (0);
+You should call this function for every counter you have added, in between calls to CollectData();
+
+</pre>
+</dd>
+<dd>
+<p><a href="#item_getcountervalue"><code>GetCounterValue()</code></a> can be called in a loop and in conjunction with CollectData(), if you wish to gather
+a series of data.
+
+</p>
+</dd>
+<dd>
+<pre>
+        # Get the initial values
+        $PerfObj-&gt;CollectData();
+        
+        for(1..10)
+        {
+                # Store the value in question
+                $value = $PerfObj-&gt;GetCounterValue(&quot;System&quot;, &quot;System Up Time&quot;, -1);
+                
+                # Do something with $value
+                
+                # Now update the counter value
+                $PerfObj-&gt;CollectData();
+        }
+
+</pre>
+</dd>
+<p></p>
+<dt><strong><a name="item_geterrortext">$PerfObj-&gt;<code>GetErrorText()</code></a></strong><br />
+</dt>
+<dd>
+Returns the error message from the last failed function call.
+
+
+</dd>
+<dd>
+<pre>
+        my $err = $PerfObj-&gt;GetErrorText();
+
+</pre>
+</dd>
+<p></p></dl>
+<p>
+</p>
+<hr />
+<h1><a name="author">AUTHOR</a></h1>
+<p>Glen Small <a href="mailto:perl.dev@cyberex.org.uk<gt>">perl.dev@cyberex.org.uk<gt></a>
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="see_also">SEE ALSO</a></h1>
+
+</body>
+
+</html>

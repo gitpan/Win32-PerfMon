@@ -1,0 +1,29 @@
+Win32/PerfMon version 1.00
+==========================
+
+This module is a simple interface into the Windows Performance Monitor, provided in Windows NT4 +
+Usage for the module can be found in the POD within PerfMon.pm or PerfMon.html.
+
+INSTALLATION
+================
+
+For Binary installations, copy the files within the relevent blib tree, into your perl directory
+structure, and run as normal.  To complie, use the following
+
+NOTE: this has only been tested on VC++ 6
+
+   perl Makefile.PL
+   nmake -f Makefile all
+   
+
+DEPENDENCIES
+
+This module depends on nothing other than windows PDH. 
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2004 Glen Small
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
